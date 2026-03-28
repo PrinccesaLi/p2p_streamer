@@ -81,7 +81,7 @@ PAC_API PacErrorCode PacStartCapture(
     PacCaptureMode mode,
     const wchar_t* outputPath,
     PacLevelCallback levelCallback,
-    PacDataCallback dataCallback, // <-- ДОБАВИТЬ ЭТУ СТРОКУ
+    PacDataCallback dataCallback,
     void* userData,
     PacHandle* handle
 );

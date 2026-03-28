@@ -324,7 +324,7 @@ PAC_API PacErrorCode PacStartCapture(
         mode == PAC_MODE_INCLUDE,
         outputPath,
         callback,
-        dCallback // <-- ПЕРЕДАЕМ НАШ КОЛЛБЭК СЮДА
+        dCallback
     );
 
     if (FAILED(hr))

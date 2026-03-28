@@ -42,7 +42,7 @@ public:
         bool includeProcessTree,
         const wchar_t* outputPath,
         LevelCallback callback,
-        DataCallback dataCallback // <-- ДОБАВИТЬ ЭТУ СТРОКУ
+        DataCallback dataCallback
     );
 
     // Stop capture
