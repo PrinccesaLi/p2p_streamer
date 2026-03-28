@@ -20,4 +20,4 @@
 ## 🛠 Установка
 1. Клонируйте репозиторий:
    ```bash
-   git clone [https://github.com/ВАШ_НИК/p2p-streamer.git](https://github.com/PrinccesaLi/p2p_streamer.git)
+   git clone (https://github.com/PrinccesaLi/p2p_streamer.git)
