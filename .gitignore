@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+streamer_settings.json
+
+audio/build/
+audio/.vs/
+audio/out/
+audio/CMakeCache.txt
+audio/CMakeFiles/
+
+.vscode/
+.idea/

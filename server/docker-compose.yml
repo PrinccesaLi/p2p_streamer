@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  # Наш сигнальный сервер на Python
+  signaling-server:
+    build: .
+    container_name: p2p_server
+    ports:
+      - "8080:8080"
+    restart: always
+
+  # Официальный контейнер Cloudflare Tunnel
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: p2p_tunnel
+    # Подключаем туннель к нашему серверу (обращаемся по имени сервиса 'signaling-server')
+    command: tunnel --url http://signaling-server:8080
+    restart: always
+    depends_on:
+      - signaling-server

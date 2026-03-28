@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>P2P STREAMER PRO</title>
+    <style>
+        :root { --primary: #00d2ff; --secondary: #3a7bd5; --bg-color: #0b0c10; --panel-bg: rgba(20, 24, 36, 0.7); }
+        body { background-color: var(--bg-color); color: #fff; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; touch-action: none; }
+        .login-box { background: var(--panel-bg); padding: 40px; border-radius: 15px; text-align: center; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); z-index: 10; }
+        h2 { margin-top: 0; color: var(--primary); font-weight: 300; letter-spacing: 2px; }
+        input { padding: 15px; font-size: 24px; text-align: center; width: 200px; border-radius: 8px; border: 1px solid var(--secondary); background: rgba(0,0,0,0.5); color: white; letter-spacing: 10px; outline: none; transition: 0.3s; }
+        input:focus { box-shadow: 0 0 15px var(--secondary); }
+        button.connect-btn { padding: 12px 30px; font-size: 16px; margin-top: 20px; text-transform: uppercase; font-weight: bold; background: linear-gradient(45deg, var(--secondary), var(--primary)); color: white; border: none; border-radius: 8px; cursor: pointer; transition: 0.3s; letter-spacing: 1px; }
+        button.connect-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 210, 255, 0.4); }
+        #status { margin-top: 15px; color: #ffaa00; font-weight: 600; font-size: 14px; }
+        #player-container { display: none; position: relative; width: 100vw; height: 100vh; background: #000; justify-content: center; align-items: center; }
+        video { width: 100%; height: 100%; object-fit: contain; outline: none; cursor: none; }
+        #remote-cursor { position: absolute; top: 0; left: 0; width: 8px; height: 8px; background-color: #00ff00; border: 3px solid #000; border-radius: 50%; pointer-events: none; display: none; z-index: 1000; transform: translate(-50%, -50%); box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: transform 0.03s linear; }
+        .hud-panel { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: var(--panel-bg); backdrop-filter: blur(10px); padding: 10px 20px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); display: flex; gap: 20px; align-items: center; color: #ddd; font-size: 14px; opacity: 0.3; transition: opacity 0.3s; z-index: 100; }
+        #player-container:hover .hud-panel, .hud-panel:hover { opacity: 1; }
+        .stat-box { display: flex; align-items: center; gap: 5px; font-weight: bold; }
+        .ping-dot { width: 8px; height: 8px; background: #00ff00; border-radius: 50%; box-shadow: 0 0 5px #00ff00; }
+        .icon-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 5px; transition: 0.2s; outline: none; }
+        .icon-btn:hover { color: var(--primary); transform: scale(1.1); }
+        .icon-btn.active { color: #00ff00; text-shadow: 0 0 10px #00ff00; transform: scale(1.1); }
+        #mobile-keyboard-input { opacity: 0; position: absolute; top: -1000px; }
+        
+        #play-overlay { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; text-align: center;}
+        #play-overlay h1 { color: var(--primary); font-size: 30px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px;}
+        #play-overlay p { color: #aaa; font-size: 16px; margin: 0;}
+    </style>
+</head>
+<body>
+
+    <div class="login-box" id="login-box">
+        <h2>P2P CONNECT</h2>
+        <input type="text" id="room-code" maxlength="4" placeholder="0000" autocomplete="off"><br>
+        <button class="connect-btn" onclick="joinStream()">Подключиться</button>
+        <div id="status">Ожидание...</div>
+    </div>
+
+    <div id="player-container">
+        <div id="play-overlay" onclick="forcePlay()">
+            <h1>▶ Нажмите на экран</h1>
+            <p>Браузер заблокировал видео после F5. Нажмите для запуска.</p>
+        </div>
+
+        <div id="remote-cursor"></div>
+        <video id="video-player" playsinline tabindex="0"></video>
+        <div class="hud-panel">
+            <div class="stat-box"><div class="ping-dot" id="ping-dot"></div> <span id="ping-text">-- ms</span></div>
+            <button class="icon-btn" id="btn-gamemode" onclick="toggleGameMode()" title="Игровой режим (Для 3D игр)">🎮</button>
+            <button class="icon-btn" onclick="toggleFullscreen()" title="Полный экран">⛶</button>
+            <button class="icon-btn" onclick="showMobileKeyboard()" title="Клавиатура (для телефонов)">⌨️</button>
+        </div>
+        <input type="text" id="mobile-keyboard-input" autocomplete="off">
+    </div>
+
+    <script>
+        const statusEl = document.getElementById('status');
+        const loginBox = document.getElementById('login-box');
+        const playerContainer = document.getElementById('player-container');
+        const videoPlayer = document.getElementById('video-player');
+        const remoteCursor = document.getElementById('remote-cursor');
+        const pingText = document.getElementById('ping-text');
+        const pingDot = document.getElementById('ping-dot');
+        const mobileInput = document.getElementById('mobile-keyboard-input');
+        const btnGameMode = document.getElementById('btn-gamemode');
+        const playOverlay = document.getElementById('play-overlay');
+        
+        let ws;
+        let pc;
+        let dataChannel; 
+        let isStreamActive = false; 
+        let isGameMode = false;
+        let currentCode = "";
+
+        window.onload = () => {
+            const pathCode = window.location.pathname.replace('/', '');
+            if (pathCode.length >= 4 && !isNaN(pathCode)) {
+                document.getElementById('room-code').value = pathCode;
+                joinStream();
+            }
+        };
+
+        // --- WATCHDOG ---
+        let lastVideoTime = -1;
+        let freezeCounter = 0;
+        let gracePeriod = 10; 
+        
+        videoPlayer.addEventListener('playing', () => {
+            gracePeriod = 5; 
+            freezeCounter = 0;
+            console.log("▶️ Видеопоток успешно пошел!");
+        });
+        
+        setInterval(async () => {
+            if (pc && pc.connectionState === 'connected') {
+                const stats = await pc.getStats();
+                stats.forEach(report => {
+                    if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                        const ping = (report.currentRoundTripTime * 1000).toFixed(0);
+                        if (!isNaN(ping)) {
+                            pingText.innerText = `${ping} ms`;
+                            pingDot.style.background = ping < 50 ? '#00ff00' : (ping < 100 ? '#ffaa00' : '#ff0000');
+                            pingDot.style.boxShadow = `0 0 5px ${pingDot.style.background}`;
+                        }
+                    }
+                });
+            }
+
+            if (!isStreamActive || !pc) return;
+
+            if (gracePeriod > 0) {
+                gracePeriod--;
+                return;
+            }
+
+            if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected' || pc.connectionState === 'closed') {
+                console.log("⚠️ Соединение разорвано. Требую рестарт...");
+                requestRestart();
+                return;
+            }
+
+            if (videoPlayer.currentTime === lastVideoTime && videoPlayer.srcObject && videoPlayer.readyState >= 2 && !videoPlayer.paused) {
+                freezeCounter++;
+                if (freezeCounter >= 4) { 
+                    console.log("🥶 Видеопоток завис на 4 сек. Требую рестарт...");
+                    requestRestart();
+                }
+            } else {
+                freezeCounter = 0;
+                lastVideoTime = videoPlayer.currentTime;
+            }
+        }, 1000);
+
+        function requestRestart() {
+            if (gracePeriod > 0) return; 
+            
+            isStreamActive = false; 
+            gracePeriod = 10; 
+            freezeCounter = 0;
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ action: "request_restart", code: currentCode }));
+                loginBox.style.display = 'block';
+                playerContainer.style.display = 'none';
+                statusEl.innerText = "Попытка восстановления потока...";
+                statusEl.style.color = "#ffaa00";
+            } else {
+                connectWS(currentCode);
+            }
+        }
+
+        function forcePlay() {
+            videoPlayer.play();
+            playOverlay.style.display = 'none';
+            isStreamActive = true;
+            gracePeriod = 5;
+            freezeCounter = 0;
+        }
+
+        function initPC() {
+            if (pc) pc.close();
+            pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+
+            pc.ondatachannel = (event) => {
+                dataChannel = event.channel;
+                dataChannel.onmessage = (e) => {
+                    try {
+                        const data = JSON.parse(e.data);
+                        if (data.action === 'cursor' && !isGameMode) {
+                            updateRemoteCursor(data.x, data.y);
+                        } else if (data.action === 'init_preset') {
+                            window.streamPreset = data.preset;
+                            pc.getReceivers().forEach(receiver => {
+                                if ('playoutDelayHint' in receiver) {
+                                    if (data.preset === "super_duper") receiver.playoutDelayHint = 2.0;
+                                    else if (data.preset === "super_quality") receiver.playoutDelayHint = 1.0;
+                                    else receiver.playoutDelayHint = 0.0;
+                                }
+                            });
+                        }
+                    } catch (err) {}
+                };
+            };
+
+            pc.ontrack = (event) => {
+                loginBox.style.display = 'none';
+                playerContainer.style.display = 'flex';
+                videoPlayer.focus(); 
+                
+                const newStream = event.streams[0];
+                if (videoPlayer.srcObject !== newStream) {
+                    videoPlayer.srcObject = null; 
+                    videoPlayer.srcObject = newStream;
+                    
+                    let playPromise = videoPlayer.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            playOverlay.style.display = 'none';
+                            isStreamActive = true;
+                            gracePeriod = 5;
+                            freezeCounter = 0;
+                        }).catch(error => {
+                            console.log("Auto-play blocked:", error);
+                            playOverlay.style.display = 'flex';
+                            isStreamActive = false; 
+                        });
+                    }
+                }
+            };
+        }
+
+        function connectWS(code) {
+            currentCode = code;
+            statusEl.innerText = "Подключение к серверу...";
+            statusEl.style.color = "#ffaa00";
+            
+            window.history.pushState({}, '', '/' + code);
+
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
+            
+            ws.onopen = () => ws.send(JSON.stringify({ action: "join", code: code }));
+
+            ws.onclose = () => {
+                if (isStreamActive || playOverlay.style.display === 'flex') {
+                    statusEl.innerText = "Переподключение к серверу...";
+                    setTimeout(() => connectWS(currentCode), 2000);
+                }
+            };
+
+            ws.onerror = () => ws.close();
+
+            ws.onmessage = async (event) => {
+                const msg = JSON.parse(event.data);
+                if (msg.action === "error") {
+                    statusEl.innerText = msg.message;
+                    statusEl.style.color = "#ff0000";
+                }
+                if (msg.action === "offer") {
+                    window.streamPreset = msg.preset;
+                    initPC(); 
+                    
+                    statusEl.innerText = "Установка P2P соединения...";
+                    await pc.setRemoteDescription(new RTCSessionDescription(msg.data));
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+                    
+                    setTimeout(() => {
+                        if(ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ 
+                                action: "answer", 
+                                code: currentCode, 
+                                data: { type: pc.localDescription.type, sdp: pc.localDescription.sdp } 
+                            }));
+                            statusEl.innerText = "Видео загружается...";
+                        }
+                    }, 1000); 
+                }
+            };
+        }
+
+        async function joinStream() {
+            const code = document.getElementById('room-code').value;
+            if (code.length < 4) return alert("Введите 4 цифры");
+            connectWS(code);
+        }
+
+        function updateRemoteCursor(x, y) {
+            if (!videoPlayer.videoWidth || isGameMode) return;
+            const rect = videoPlayer.getBoundingClientRect();
+            const videoRatio = videoPlayer.videoWidth / videoPlayer.videoHeight;
+            const elementRatio = rect.width / rect.height;
+            let actualWidth = rect.width, actualHeight = rect.height, startX = 0, startY = 0;
+
+            if (elementRatio > videoRatio) {
+                actualWidth = actualHeight * videoRatio;
+                startX = (rect.width - actualWidth) / 2;
+            } else {
+                actualHeight = actualWidth / videoRatio;
+                startY = (rect.height - actualHeight) / 2;
+            }
+
+            const pixelX = rect.left + startX + (x * actualWidth);
+            const pixelY = rect.top + startY + (y * actualHeight);
+
+            remoteCursor.style.display = 'block';
+            remoteCursor.style.transform = `translate(${pixelX}px, ${pixelY}px)`;
+        }
+
+        function toggleGameMode() {
+            if (!document.pointerLockElement) {
+                let promise = videoPlayer.requestPointerLock({ unadjustedMovement: true });
+                if (promise) promise.catch(err => videoPlayer.requestPointerLock());
+            } else {
+                document.exitPointerLock();
+            }
+        }
+
+        document.addEventListener('pointerlockchange', () => {
+            if (document.pointerLockElement === videoPlayer) {
+                isGameMode = true;
+                btnGameMode.classList.add('active');
+                remoteCursor.style.display = 'none';
+            } else {
+                isGameMode = false;
+                btnGameMode.classList.remove('active');
+            }
+        });
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) playerContainer.requestFullscreen();
+            else document.exitFullscreen();
+        }
+        function showMobileKeyboard() { mobileInput.focus(); }
+
+        videoPlayer.addEventListener('dblclick', toggleFullscreen);
+        videoPlayer.addEventListener('contextmenu', e => e.preventDefault());
+
+        function sendControlData(action, clientX, clientY, button = 'left') {
+            if (!dataChannel || dataChannel.readyState !== 'open') return;
+            const rect = videoPlayer.getBoundingClientRect();
+            const videoRatio = videoPlayer.videoWidth / videoPlayer.videoHeight;
+            const elementRatio = rect.width / rect.height;
+            let actualWidth = rect.width, actualHeight = rect.height, startX = 0, startY = 0;
+
+            if (elementRatio > videoRatio) {
+                actualWidth = actualHeight * videoRatio;
+                startX = (rect.width - actualWidth) / 2;
+            } else {
+                actualHeight = actualWidth / videoRatio;
+                startY = (rect.height - actualHeight) / 2;
+            }
+
+            let x = (clientX - rect.left - startX) / actualWidth;
+            let y = (clientY - rect.top - startY) / actualHeight;
+
+            if (x < 0 || x > 1 || y < 0 || y > 1) return;
+            
+            if (action === 'mousemove' && !isGameMode) updateRemoteCursor(x, y);
+            dataChannel.send(JSON.stringify({ action: action, x: x, y: y, button: button }));
+        }
+
+        document.addEventListener('mousedown', (e) => {
+            if (isGameMode && dataChannel && dataChannel.readyState === 'open') {
+                dataChannel.send(JSON.stringify({ action: 'mousedown', button: {0:'left', 1:'middle', 2:'right'}[e.button] }));
+            } else if (e.target === videoPlayer || e.target === playOverlay) {
+                sendControlData('mousedown', e.clientX, e.clientY, {0:'left', 1:'middle', 2:'right'}[e.button]);
+            }
+        });
+
+        document.addEventListener('mouseup', (e) => {
+            if (isGameMode && dataChannel && dataChannel.readyState === 'open') {
+                dataChannel.send(JSON.stringify({ action: 'mouseup', button: {0:'left', 1:'middle', 2:'right'}[e.button] }));
+            } else if (e.target === videoPlayer || e.target === playOverlay) {
+                sendControlData('mouseup', e.clientX, e.clientY, {0:'left', 1:'middle', 2:'right'}[e.button]);
+            }
+        });
+        
+        let lastMoveTime = 0;
+        document.addEventListener('mousemove', (e) => {
+            if (isGameMode) {
+                if (dataChannel && dataChannel.readyState === 'open' && (e.movementX !== 0 || e.movementY !== 0)) {
+                    dataChannel.send(JSON.stringify({ action: 'mouse_delta', dx: e.movementX, dy: e.movementY }));
+                }
+            } else {
+                let now = Date.now();
+                if (now - lastMoveTime > 30) {
+                    if (e.target === videoPlayer || e.target === playOverlay) sendControlData('mousemove', e.clientX, e.clientY, 'none');
+                    lastMoveTime = now;
+                }
+            }
+        });
+
+        function handleKey(e, actionType) {
+            if (!dataChannel || dataChannel.readyState !== 'open') return;
+            if (['F5', 'F12'].includes(e.key)) return; 
+            if (e.key !== 'Escape') e.preventDefault(); 
+            dataChannel.send(JSON.stringify({ action: actionType, key: e.key, code: e.code }));
+        }
+
+        window.addEventListener('keydown', (e) => handleKey(e, 'keydown'));
+        window.addEventListener('keyup', (e) => handleKey(e, 'keyup'));
+    </script>
+</body>
+</html>

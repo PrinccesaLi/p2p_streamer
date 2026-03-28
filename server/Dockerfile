@@ -1,0 +1,17 @@
+# Используем легкий официальный образ Python
+FROM python:3.11-slim
+
+# Рабочая директория внутри контейнера
+WORKDIR /app
+
+# Копируем наши файлы внутрь контейнера
+COPY server.py index.html ./
+
+# Устанавливаем единственную зависимость для сервера
+RUN pip install --no-cache-dir aiohttp
+
+# Открываем порт
+EXPOSE 8080
+
+# Команда запуска сервера
+CMD ["python", "server.py"]

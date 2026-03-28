@@ -1,0 +1,12 @@
+aiortc==1.14.0
+websockets==16.0
+aiohttp==3.11.18
+
+bettercam==1.0.0
+mss==10.1.0
+av==16.1.0
+opencv-python==4.13.0.92
+numpy==2.4.3
+
+customtkinter==5.2.2
+screeninfo==0.8.1
