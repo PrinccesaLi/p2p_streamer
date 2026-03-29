@@ -1,0 +1,23 @@
+:root { --primary: #00d2ff; --secondary: #3a7bd5; --bg-color: #0b0c10; --panel-bg: rgba(20, 24, 36, 0.7); }
+body { background-color: var(--bg-color); color: #fff; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; touch-action: none; }
+.login-box { background: var(--panel-bg); padding: 40px; border-radius: 15px; text-align: center; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); z-index: 10; }
+h2 { margin-top: 0; color: var(--primary); font-weight: 300; letter-spacing: 2px; }
+input { padding: 15px; font-size: 24px; text-align: center; width: 200px; border-radius: 8px; border: 1px solid var(--secondary); background: rgba(0,0,0,0.5); color: white; letter-spacing: 10px; outline: none; transition: 0.3s; }
+input:focus { box-shadow: 0 0 15px var(--secondary); }
+button.connect-btn { padding: 12px 30px; font-size: 16px; margin-top: 20px; text-transform: uppercase; font-weight: bold; background: linear-gradient(45deg, var(--secondary), var(--primary)); color: white; border: none; border-radius: 8px; cursor: pointer; transition: 0.3s; letter-spacing: 1px; }
+button.connect-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 210, 255, 0.4); }
+#status { margin-top: 15px; color: #ffaa00; font-weight: 600; font-size: 14px; }
+#player-container { display: none; position: relative; width: 100vw; height: 100vh; background: #000; justify-content: center; align-items: center; }
+video { width: 100%; height: 100%; object-fit: contain; outline: none; cursor: none; }
+#remote-cursor { position: absolute; top: 0; left: 0; width: 8px; height: 8px; background-color: #00ff00; border: 3px solid #000; border-radius: 50%; pointer-events: none; display: none; z-index: 1000; transform: translate(-50%, -50%); box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: transform 0.03s linear; }
+.hud-panel { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: var(--panel-bg); backdrop-filter: blur(10px); padding: 10px 20px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); display: flex; gap: 20px; align-items: center; color: #ddd; font-size: 14px; opacity: 0.3; transition: opacity 0.3s; z-index: 100; }
+#player-container:hover .hud-panel, .hud-panel:hover { opacity: 1; }
+.stat-box { display: flex; align-items: center; gap: 5px; font-weight: bold; }
+.ping-dot { width: 8px; height: 8px; background: #00ff00; border-radius: 50%; box-shadow: 0 0 5px #00ff00; }
+.icon-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 5px; transition: 0.2s; outline: none; }
+.icon-btn:hover { color: var(--primary); transform: scale(1.1); }
+.icon-btn.active { color: #00ff00; text-shadow: 0 0 10px #00ff00; transform: scale(1.1); }
+#mobile-keyboard-input { opacity: 0; position: absolute; top: -1000px; }
+#play-overlay { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; text-align: center;}
+#play-overlay h1 { color: var(--primary); font-size: 30px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px;}
+#play-overlay p { color: #aaa; font-size: 16px; margin: 0;}

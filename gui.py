@@ -6,6 +6,7 @@ import json
 import os
 from screeninfo import get_monitors
 
+from utils import resource_path
 from main import run_signaling 
 from aidio_core.audio_engine import AudioCaptureEngine 
 
@@ -32,13 +33,13 @@ class StreamerApp(ctk.CTk):
         self.resizable(False, False)
         self.configure(fg_color=BG_COLOR)
         
-        try: self.iconbitmap("icon.ico")
+        try: self.iconbitmap(resource_path("icon.ico"))
         except: pass 
             
         self.is_streaming = False
         self.settings_file = "streamer_settings.json"
         
-        self.audio_scanner = AudioCaptureEngine("bin/ProcessAudioCapture.dll")
+        self.audio_scanner = AudioCaptureEngine(resource_path("bin/ProcessAudioCapture.dll"))
         self.audio_switches = {} 
         self.audio_vars = {}     
 
@@ -120,6 +121,17 @@ class StreamerApp(ctk.CTk):
         self.resize_dropdown = ctk.CTkOptionMenu(self.frame_video, variable=self.resize_var, values=["Быстрый (Без нагрузки CPU)", "Качественный (Нагрузка CPU)", "Отключен (Оригинал)"], **dropdown_kwargs)
         self.resize_dropdown.grid(row=4, column=1, sticky="ew", padx=15, pady=6)
 
+        self.gamma_label = ctk.CTkLabel(self.frame_video, text="Гамма: 2.2", text_color=TEXT_MAIN)
+        self.gamma_label.grid(row=5, column=0, sticky="w", padx=15, pady=6)
+        
+        self.gamma_var = ctk.DoubleVar(value=2.2)
+        self.gamma_slider = ctk.CTkSlider(
+            self.frame_video, from_=0.5, to=3.5, variable=self.gamma_var, 
+            number_of_steps=30, command=self.update_gamma_label,
+            button_color=ACCENT_PURPLE, button_hover_color=ACCENT_PURPLE_HOVER, progress_color=ACCENT_CYAN
+        )
+        self.gamma_slider.grid(row=5, column=1, sticky="ew", padx=15, pady=6)
+
         self.frame_control = ctk.CTkFrame(self.left_pane, corner_radius=15, fg_color=PANEL_BG)
         self.frame_control.pack(fill="x", ipadx=10, ipady=10)
 
@@ -184,6 +196,9 @@ class StreamerApp(ctk.CTk):
         self.load_settings()
         self.refresh_audio_sources()
 
+    def update_gamma_label(self, value):
+        self.gamma_label.configure(text=f"Гамма: {value:.1f}")
+
     def refresh_audio_sources(self):
         try: processes = self.audio_scanner.get_audio_processes()
         except: processes = []
@@ -237,7 +252,8 @@ class StreamerApp(ctk.CTk):
                 "Качественный (Нагрузка CPU)": "quality", 
                 "Отключен (Оригинал)": "disabled"
             }[self.resize_var.get()]
-            
+
+            self.config_state["gamma"] = round(self.gamma_var.get(), 1)
             self.loop.call_soon_threadsafe(self.restart_event.set)
 
     def paste_server(self):
@@ -294,14 +310,14 @@ class StreamerApp(ctk.CTk):
             "Качественный (Нагрузка CPU)": "quality", 
             "Отключен (Оригинал)": "disabled"
         }[self.resize_var.get()]
-
+        self.config_state["gamma"] = round(self.gamma_var.get(), 1)
         self.stream_thread = threading.Thread(target=self.run_asyncio_loop, args=(server_url, self.config_state), daemon=True)
         self.stream_thread.start()
 
     def stop_stream(self):
         self.is_streaming = False
         self.server_entry.configure(state="normal")
-        self.action_button.configure(text="🚀 ЗАПУСТИТЬ СТРИМ", fg_color=ACCENT_CYAN, hover_color=ACCENT_CYAN_HOVER, text_color="#000000")
+        self.action_button.configure(text="ЗАПУСТИТЬ СТРИМ", fg_color=ACCENT_CYAN, hover_color=ACCENT_CYAN_HOVER, text_color="#000000")
         
         self.apply_btn.configure(state="disabled", fg_color="#1E2532", text_color=TEXT_MUTED)
         self.status_frame.configure(border_color="#2A3441")

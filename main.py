@@ -173,7 +173,8 @@ async def run_signaling(server_url, config_state, update_ui_callback, stop_event
         nonlocal ws_connection, room_code
         while not stop_event.is_set():
             try:
-                async with websockets.connect(server_url, ping_interval=None) as ws:
+                # 1. ВКЛЮЧАЕМ ПИНГИ, чтобы роутер не убивал соединение через 2 минуты
+                async with websockets.connect(server_url, ping_interval=20, ping_timeout=20) as ws:
                     ws_connection = ws
                     
                     create_payload = {"action": "create"}
@@ -185,25 +186,24 @@ async def run_signaling(server_url, config_state, update_ui_callback, stop_event
                         if data["action"] == "created":
                             room_code = data["code"]
                             update_ui_callback(room_code)
-                            if pc and pc.localDescription:
-                                await ws.send(json.dumps({
-                                    "action": "offer", 
-                                    "code": room_code, 
-                                    "data": {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type},
-                                    "preset": config_state["preset"]
-                                }))
+                            
+                            # 2. ФАТАЛЬНЫЙ БАГ БЫЛ ТУТ! 
+                            # Раньше мы здесь слепо кидали оффер зрителю. 
+                            # Теперь мы этого НЕ ДЕЛАЕМ. Оффер отправляется ТОЛЬКО при реальном рестарте видеоядра.
+                            print(f"[СИСТЕМА] Связь с сервером установлена. Комната: {room_code}")
+
                         elif data["action"] == "answer":
                             answer = RTCSessionDescription(sdp=data["data"]["sdp"], type=data["data"]["type"])
                             await pc.setRemoteDescription(answer)
-                            print("ЗРИТЕЛЬ УСПЕШНО ПОДКЛЮЧЕН!")
+                            print("🚀 ЗРИТЕЛЬ УСПЕШНО ПОДКЛЮЧЕН!")
                             
                         elif data["action"] == "viewer_request_restart":
-                            print("[WATCHDOG] Зритель сообщил о черном экране. Экстренный рестарт!")
+                            print("⚠️ [WATCHDOG] Зритель запросил видеопоток. Выполняю горячий старт...")
                             restart_event.set()
                             
             except Exception as e:
                 if stop_event.is_set(): break
-                print(f"Потеряна связь с сигнальным сервером. Авто-реконнект через 3 сек...")
+                print(f"⚠️ Потеряна связь с сигнальным сервером. Авто-реконнект через 3 сек...")
                 await asyncio.sleep(3)
 
     async def watch_restart():

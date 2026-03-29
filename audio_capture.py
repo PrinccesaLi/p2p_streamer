@@ -5,6 +5,8 @@ from av import AudioFrame
 from aiortc import AudioStreamTrack
 from aidio_core.audio_engine import AudioCaptureEngine
 
+from utils import resource_path
+
 class SystemAudioTrack(AudioStreamTrack):
     def __init__(self, config_state):
         super().__init__()
@@ -22,7 +24,7 @@ class SystemAudioTrack(AudioStreamTrack):
         self.loop = asyncio.get_event_loop()
 
     def _start_engine(self, pid):
-        engine = AudioCaptureEngine("bin/ProcessAudioCapture.dll")
+        engine = AudioCaptureEngine(resource_path("bin/ProcessAudioCapture.dll"))
         q = asyncio.Queue()
     
         buffer = bytearray()

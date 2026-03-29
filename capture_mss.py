@@ -9,9 +9,6 @@ import queue
 from av import VideoFrame
 from aiortc import VideoStreamTrack
 
-GAMMA = 2.2
-INV_GAMMA = 1.0 / GAMMA
-GAMMA_LUT = np.array([((i / 255.0) ** INV_GAMMA) * 255 for i in np.arange(0, 256)]).astype("uint8")
 
 def mss_worker(queue_obj, stop_event, fps, target_size, monitor_idx, resize_mode):
     ctypes.windll.winmm.timeBeginPeriod(1)
@@ -82,7 +79,12 @@ class MSSTrack(VideoStreamTrack):
         if not self.config_state.get("video_enabled", True):
             frame_numpy = np.zeros_like(frame_numpy)
 
-        frame_numpy = cv2.LUT(frame_numpy, GAMMA_LUT)
+        gamma = self.config_state.get("gamma", 2.2)
+        if gamma != 1.0:
+            inv_gamma = 1.0 / gamma
+            lut = np.array([((i / 255.0) ** inv_gamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
+            frame_numpy = cv2.LUT(frame_numpy, lut)
+
         video_frame = VideoFrame.from_ndarray(frame_numpy, format="rgb24")
         video_frame.pts = pts
         video_frame.time_base = time_base

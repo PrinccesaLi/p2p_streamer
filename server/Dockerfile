@@ -5,7 +5,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Копируем наши файлы внутрь контейнера
-COPY server.py index.html ./
+COPY . .
 
 # Устанавливаем единственную зависимость для сервера
 RUN pip install --no-cache-dir aiohttp
