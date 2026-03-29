@@ -132,11 +132,11 @@ export function connectWS(code) {
 export function startWatchdog() {
     UI.videoPlayer.addEventListener('playing', () => {
         State.gracePeriod = 5; 
-        State.freezeCounter = 0;
         console.log("▶️ Видеопоток успешно пошел!");
     });
     
     setInterval(async () => {
+        // 1. Обновляем пинг (зеленая лампочка)
         if (State.pc && State.pc.connectionState === 'connected') {
             const stats = await State.pc.getStats();
             stats.forEach(report => {
@@ -157,22 +157,9 @@ export function startWatchdog() {
             State.gracePeriod--;
             return;
         }
-
         if (State.pc.connectionState === 'failed' || State.pc.connectionState === 'disconnected' || State.pc.connectionState === 'closed') {
-            console.log("⚠️ Соединение разорвано. Требую рестарт...");
+            console.log("⚠️ Соединение разорвано на уровне сети. Требую рестарт...");
             requestRestart();
-            return;
-        }
-
-        if (UI.videoPlayer.currentTime === State.lastVideoTime && UI.videoPlayer.srcObject && UI.videoPlayer.readyState >= 2 && !UI.videoPlayer.paused) {
-            State.freezeCounter++;
-            if (State.freezeCounter >= 4) { 
-                console.log("🥶 Видеопоток завис на 4 сек. Требую рестарт...");
-                requestRestart();
-            }
-        } else {
-            State.freezeCounter = 0;
-            State.lastVideoTime = UI.videoPlayer.currentTime;
         }
     }, 1000);
 }

@@ -26,3 +26,12 @@ window.onload = () => {
         window.joinStream();
     }
 };
+
+window.sendEsc = () => {
+    if (State.dataChannel) {
+        State.dataChannel.send(JSON.stringify({ action: 'keydown', key: 'Escape', code: 'Escape' }));
+        setTimeout(() => {
+            State.dataChannel.send(JSON.stringify({ action: 'keyup', key: 'Escape', code: 'Escape' }));
+        }, 50);
+    }
+};

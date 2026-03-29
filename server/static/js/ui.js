@@ -58,6 +58,14 @@ export function toggleFullscreen() {
     else document.exitFullscreen();
 }
 
+// ui.js (измените только эту функцию)
 export function showMobileKeyboard() { 
+    UI.mobileInput.style.top = '10px'; // Временно возвращаем в зону видимости
     UI.mobileInput.focus(); 
+    UI.mobileInput.click();
+    
+    // Прячем обратно, чтобы не мешало, но оставляем фокус
+    setTimeout(() => {
+        UI.mobileInput.style.top = '-1000px';
+    }, 100);
 }
